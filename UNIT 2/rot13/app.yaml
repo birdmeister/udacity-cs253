@@ -1,0 +1,16 @@
+application: udacityunit2lea
+version: 1
+runtime: python27
+api_version: 1
+threadsafe: true
+
+handlers:
+- url: /static
+  static_dir: static
+
+- url: /.*
+  script: unit2homework.app
+
+libraries:
+- name: jinja2
+  version: latest
