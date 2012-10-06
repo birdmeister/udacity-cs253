@@ -1,0 +1,8 @@
+<div class="post">
+  <div class="post">{{post.render() | safe}}</div>
+
+<br><br>
+
+<h2>Queried {{time_update}} seconds ago</h2>
+
+</div>
