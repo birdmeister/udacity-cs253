@@ -30,17 +30,21 @@ def valid_pw(name, password, h):
     return h == make_pw_hash(name, password, salt)
 
 
-#verifying cookie
+
+#cookie hashing and hash-validation functions
 secret = 'manmanmanfu!up'
 
-def make_secure_val(val):
+def make_secure_cookie(val):
     return '%s|%s' % (val, hmac.new(secret, val).hexdigest())
 
 def check_secure_val(secure_val):
     val = secure_val.split('|')[0]
-    if secure_val == make_secure_val(val):
+    if secure_val == make_secure_cookie(val):
         return val
 
+
+       
+        
 #blog handler
 class BlogHandler(webapp2.RequestHandler):
     def write(self, *a, **kw):
@@ -52,34 +56,8 @@ class BlogHandler(webapp2.RequestHandler):
 
     def render(self, template, **kw):
 		self.write(self.render_str(template, **kw))
-
-
-    def login(self, user):
-        self.set_secure_cookie('user_id', str(user.key().id()))
- 
-
-    def logout(self):
-        self.response.headers.add_header('Set-Cookie', 'user_id=; Path=/')
-
-
-    def set_secure_cookie(self, name, val):
-        cookie_val = make_secure_val(val)
-        self.response.headers.add_header(
-            'Set-Cookie',
-            '%s=%s; Path=/' % (name, cookie_val))
-    
-    
-    def read_secure_cookie(self, name):
-        cookie_val = self.request.cookies.get(name)
-        return cookie_val and check_secure_val(cookie_val)
-
-
-    
-    #def initialize(self, *a, **kw):
-     #   webapp2.RequestHandler.initialize(self, *a, **kw)
-      #  uid = self.read_secure_cookie('user_id')
-      #  self.user = uid and User.by_id(int(uid))
-
+   
+   
 
 
 class MainPage(BlogHandler):
@@ -89,31 +67,10 @@ class MainPage(BlogHandler):
 
 
 class User(db.Model):
-    name = db.StringProperty(required = True)
-    pw_hash = db.StringProperty(required = True)
+    username = db.StringProperty(required = True)
+    password = db.StringProperty(required = True)
     email = db.StringProperty()
 
-    @classmethod
-    def by_id(cls, uid):
-        return User.get_by_id(uid)
-
-    @classmethod
-    def by_name(cls, name):
-        u = User.all().filter('name =', name).get()
-        return u
-
-    @classmethod
-    def register(cls, name, pw, email = None):
-        pw_hash = make_pw_hash(name, pw)
-        return User(name = name,
-                    pw_hash = pw_hash,
-                    email = email)
-
-    @classmethod
-    def login(cls, name, pw):
-        u = cls.by_name(name)
-        if u and valid_pw(name, pw, u.pw_hash):
-            return u
 
 
 USER_RE = re.compile(r"^[a-zA-Z0-9_-]{3,20}$")
@@ -129,97 +86,113 @@ def valid_email(email):
     return not email or EMAIL_RE.match(email)
 
 
+
+
+
 class Signup(BlogHandler):
+    def render_signup(self, name_error="", password_error="", verify_error="",email_error="",username="",email=""):
+	    self.render("signup-form.html", error_username=name_error, error_password=password_error, error_verify=verify_error,
+			error_email=email_error,username=username,email=email)
+    
     def get(self):
-        self.render("signup-form.html")
+	    self.render_signup()
 
     def post(self):
         have_error = False
-        self.username = self.request.get('username')
-        self.password = self.request.get('password')
-        self.verify = self.request.get('verify')
-        self.email = self.request.get('email')
+        user_name     = self.request.get('username')
+        user_password = self.request.get('password')
+        user_verify   = self.request.get('verify')
+        user_email    = self.request.get('email')
 
-        params = dict(username = self.username,
-                      email = self.email)
+        
+        name_error = password_error = verify_error = email_error = ""
 
-        if not valid_username(self.username):
-            params['error_username'] = "That's not a valid username."
+        if not valid_username(user_name):
+            name_error = "That's not a valid username"
+	    have_error = True
+
+        if not valid_password(user_password):
+            password_error = "That's not a valid password"
+            have_error = True 
+
+        elif user_password != user_verify:
+            verify_error = "Your passwords didn't match"
             have_error = True
 
-        if not valid_password(self.password):
-            params['error_password'] = "That wasn't a valid password."
+        if not valid_email(user_email):
+            email_error = "That's not a valid email"
             have_error = True
-        elif self.password != self.verify:
-            params['error_verify'] = "Your passwords didn't match."
-            have_error = True
-
-        if not valid_email(self.email):
-            params['error_email'] = "That's not a valid email."
-            have_error = True
-
+  
         if have_error:
-            self.render('signup-form.html', **params)
-        else:
-            self.done()
-
-    def done(self, *a, **kw):
-        raise NotImplementedError
-
-
-
-class Register(Signup):
-    def done(self):
-        #make sure the user doesn't already exist
-        u = User.by_name(self.username)
-        if u:
-            msg = 'That user already exists.'
-            self.render('signup-form.html', error_username = msg)
-        else:
-            u = User.register(self.username, self.password, self.email)
-            u.put()
-
-            self.login(u)
-            self.redirect('/welcome')
+		self.render_signup(name_error, password_error, verify_error, email_error, user_name, user_email)
+        else:      
+            
+      	   
+      	   u = User.gql("WHERE username = '%s'"%user_name).get()
+        
+           if u:
+            	name_error = 'That user already exists.'
+            	self.render_signup(name_error)
+           else:
+            # make salted password hash
+            	h = make_pw_hash(user_name, user_password)
+		u = User(username=user_name, password=h,email=user_email)
+		
+            	u.put()
+                uid= str(make_secure_cookie(str(u.key().id()))) #dis is how we get the id from google data store(gapp engine)
+		#The Set-Cookie header which is add_header method will set the cookie name user_id(value,hash(value)) to its value
+		self.response.headers.add_header('Set-Cookie', 'user_id=%s; Path=/' %uid)
+		self.redirect('/welcome')
 
 
 class Login(BlogHandler):
+    def render_login_page(self, username="", error=""):
+		self.render('login-form.html', username=username, error=error)
+
     def get(self):
-        self.render('login-form.html')
+        self.render_login_page()
 
     def post(self):
-        username = self.request.get('username')
-        password = self.request.get('password')
-
-        u = User.login(username, password)
-        if u:
-            self.login(u)
-            self.redirect('/welcome')
+        user_name = self.request.get('username')
+        user_password = self.request.get('password')
+        if valid_username(user_name) and valid_password(user_password):
+		cookie_str = self.request.cookies.get('user_id')#getting cookie associated vit that name
+		if cookie_str:	# if cookie exists
+			cookie_val = check_secure_val(str(cookie_str)) #checking with its hash for verification
+			u = User.get_by_id(int(cookie_val)) #we get the id associated vit cookie
+			if u and valid_pw(user_name, user_password, u.password): #u.password is hashed password 
+				self.redirect('/welcome')
+        
         else:
             msg = 'Invalid login'
-            self.render('login-form.html', error = msg)
+            self.ender_login_page(user_name, error = msg)
 
 
 class Logout(BlogHandler):
     def get(self):
-        self.logout()
+        self.response.headers.add_header('Set-Cookie', 'user_id=; Path=/')
         self.redirect('/signup')
 
 
 class Welcome(BlogHandler):
-  
-   def get(self):
-     uid = self.read_secure_cookie('user_id')
-     self.user = uid and User.by_id(int(uid))	  
-     if self.user:
-            self.render('welcome.html', username = self.user.name)
+     
+  def get(self):
+     cookie_val = self.request.cookies.get('user_id')#In this case we will get the value of key(in this case name) 
+     
+     if cookie_val: 
+	user_id = check_secure_val(str(cookie_val))	
+        u = User.get_by_id(int(user_id))
+        self.render('welcome.html', username = u.username)
+        #self.response.out.write("Welcome, "+u+"!")
      else:
-            self.redirect('/signup')
+        self.redirect('/signup')
+
+			
 
 
 
 app = webapp2.WSGIApplication([('/', MainPage),
-                               ('/signup', Register),
+                               ('/signup', Signup),
                                ('/login', Login),
                                ('/logout', Logout), 
                                ('/welcome', Welcome),

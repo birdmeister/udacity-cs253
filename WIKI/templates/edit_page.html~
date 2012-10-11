@@ -1,6 +1,0 @@
-<form method="post">
-  <textarea name="content">{{page.content if page}}</textarea>
-  <span style="color:red">{{error}}</span>
-  <br/>
-  <input type="submit" value="Save">
-</form>
