@@ -4,66 +4,57 @@
   <head>
     <title>Unit 2 Rot 13</title>
     <style type="text/css">
-      .label {text-align: right}
-      .error {color: red}
+    	fieldset {
+    		width: 600px;
+    	}
+    	legend {
+    		font-size: 20px;
+    		font-weight: bold;
+    	}
+    	label.field {
+    		text-align: right;
+    		width: 130px;
+    		float: left;
+    		padding-right: 10px;
+    	}
+    	input.textbox {
+    		width: 200px;
+    		float: left;
+    	}
+    	label span {
+    		color: red;
+    		font-weight: bold;
+    	}
+    	.error {
+    		text-align: left;
+    		color: red;
+    	}
     </style>
-
   </head>
 
   <body>
     <h2>Signup</h2>
-    <form method="post">
-      <table>
-        <tr>
-          <td class="label">
-            Username
-          </td>
-          <td>
-            <input type="text" name="username" value="{{username}}">
-          </td>
-          <td class="error">
-            {{error_username}}
-          </td>
-        </tr>
-
-        <tr>
-          <td class="label">
-            Password
-          </td>
-          <td>
-            <input type="password" name="password" value="">
-          </td>
-          <td class="error">
-            {{error_password}}
-          </td>
-        </tr>
-
-        <tr>
-          <td class="label">
-            Verify Password
-          </td>
-          <td>
-            <input type="password" name="verify" value="">
-          </td>
-          <td class="error">
-            {{error_verify}}
-          </td>
-        </tr>
-
-        <tr>
-          <td class="label">
-            Email (optional)
-          </td>
-          <td>
-            <input type="text" name="email" value="{{email}}">
-          </td>
-          <td class="error">
-            {{error_email}}
-          </td>
-        </tr>
-      </table>
-
-      <input type="submit">
+    <form method="post" novalidate>
+    	<fieldset>
+    	    <legend>Signup</legend>
+            <label class="field"><span>*</span>Username</label>
+            <input type="text" name="username" value="{{username}}" class="textbox" autofocus>
+    	    <div class="error">{{error_username}}</div>    
+    	    <br><br>    
+            <label class="field"><span>*</span>Password</label>
+            <input type="password" name="password" class="textbox">
+    	    <div class="error">{{error_password}}</div>    
+    	    <br><br>
+        	<label class="field"><span>*</span>Verify Password</label>
+            <input type="password" name="verify" class="textbox">
+    	    <div class="error">{{error_verify}}</div>    
+    	    <br><br> 
+        	<label class="field">Email(optional)</label>
+            <input type="text" name="email" value="{{email}}" class="textbox" >
+    	    <div class="error">{{error_email}}</div>
+    	    <br><br>
+    	    <input type="submit">
+    	</fieldset>
     </form>
   </body>
 
